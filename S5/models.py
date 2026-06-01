@@ -56,38 +56,52 @@ class Department(Model):
         if len(self.head_name) < 2 or len(self.head_name) > 150:
             raise ValueError("head_name: длина должна быть от 2 до 150 символов")
         
-        # 4. head_specialty (опциональное, если указано - 2-200 символов)
-        if self.head_specialty is not None and len(self.head_specialty.strip()) > 0:
+        # 4. head_specialty (опциональное, только None = отсутствие, пустая строка = ошибка)
+        if self.head_specialty is not None:
+            if len(self.head_specialty) == 0:
+                raise ValueError("head_specialty: пустая строка не допускается, используйте null")
             if len(self.head_specialty) < 2 or len(self.head_specialty) > 200:
                 raise ValueError("head_specialty: длина должна быть от 2 до 200 символов")
         
-        # 5. head_phone (опциональное, формат +7XXXXXXXXXX)
-        if self.head_phone is not None and len(self.head_phone.strip()) > 0:
+        # 5. head_phone (опциональное, только None = отсутствие, пустая строка = ошибка)
+        if self.head_phone is not None:
+            if len(self.head_phone) == 0:
+                raise ValueError("head_phone: пустая строка не допускается, используйте null")
             if len(self.head_phone) > 20:
                 raise ValueError("head_phone: длина не более 20 символов")
             if not re.match(r'^\+7\d{10}$', self.head_phone):
                 raise ValueError("head_phone: неверный формат. Пример: +79161234567")
         
-        # 6. head_email (опциональное, формат email)
-        if self.head_email is not None and len(self.head_email.strip()) > 0:
+        # 6. head_email (опциональное, только None = отсутствие, пустая строка = ошибка)
+        if self.head_email is not None:
+            if len(self.head_email) == 0:
+                raise ValueError("head_email: пустая строка не допускается, используйте null")
             if len(self.head_email) > 255:
                 raise ValueError("head_email: длина не более 255 символов")
             email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
             if not re.match(email_pattern, self.head_email):
                 raise ValueError("head_email: неверный формат email")
         
-        # 7. head_cabinet_id (положительное число)
+        # 7. head_cabinet_id (опциональное, только None = отсутствие)
         if self.head_cabinet_id is not None and self.head_cabinet_id <= 0:
             raise ValueError("head_cabinet_id: должно быть положительным числом")
         
-        # 8. reception_schedule (опциональное)
-        if self.reception_schedule is not None and len(self.reception_schedule) > 500:
-            raise ValueError("reception_schedule: длина не более 500 символов")
+        # 8. reception_schedule (опциональное, только None = отсутствие, пустая строка = ошибка)
+        if self.reception_schedule is not None:
+            if len(self.reception_schedule) == 0:
+                raise ValueError("reception_schedule: пустая строка не допускается, используйте null")
+            if len(self.reception_schedule) > 500:
+                raise ValueError("reception_schedule: длина не более 500 символов")
     
-    def soft_delete(self):
-        """Мягкое удаление (устанавливает is_active = False)"""
-        self.is_active = False
-        self.save()
+    def delete_by_id(self, department_id):
+        """Мягкое удаление с возвратом True/False согласно спецификации API"""
+        try:
+            department = Department.get_by_id(department_id)
+            department.is_active = False
+            department.save()
+            return True
+        except Department.DoesNotExist:
+            return False
     
     def to_dict(self):
         """Преобразование в словарь для API (без поля is_active)"""

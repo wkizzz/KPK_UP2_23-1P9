@@ -32,7 +32,6 @@ class Department(Model):
         if self.head_name is None or len(self.head_name) < 2:
             raise ValueError("ФИО заведующего должно быть не менее 2 символов")
         
-        # Опциональные поля - только если не None
         if self.head_specialty is not None and len(self.head_specialty) < 2:
             raise ValueError("Специальность должна быть не менее 2 символов")
         if self.reception_schedule is not None and len(self.reception_schedule) > 500:

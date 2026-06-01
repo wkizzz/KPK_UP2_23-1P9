@@ -9,55 +9,77 @@
 | Параметр | Пояснение | Обязательность | Тип | Ограничение | Значение по умолчанию |
 |----------|-----------|----------------|-----|-------------|----------------------|
 | name | Название отделения | Да | string | 2-200 символов | — |
-| code | Шифр направления подготовки | Да | string | 2-20 символов, формат 00.00.00 или 00.00.00.00 | — |
+| code | Шифр направления подготовки | Да | string | 2-20 символов | — |
 | head_name | ФИО заведующего отделением | Да | string | 2-150 символов | — |
-| head_specialty | Специальность заведующего | Нет | string или null | 2-200 символов | null |
-| head_phone | Телефон заведующего | Нет | string или null | до 20 символов, формат +7XXXXXXXXXX | null |
-| head_email | Email заведующего | Нет | string или null | до 255 символов, формат email | null |
-| head_cabinet_id | Номер кабинета заведующего | Нет | integer или null | положительное число | null |
+| head_specialty | Специальность заведующего | Нет | string | 2-200 символов | null |
+| head_phone | Телефон заведующего | Нет | string | до 20 символов | null |
+| head_email | Email заведующего | Нет | string | до 255 символов | null |
+| head_cabinet_id | Номер кабинета заведующего | Нет | integer | любое целое число | null |
 | reception_is_active | Активен ли приём | Нет | boolean | true/false | false |
-| reception_schedule | Время приёма заведующего | Нет | string или null | до 500 символов | null |
+| reception_schedule | Время приёма заведующего | Нет | string | до 500 символов | null |
 
-**Уникальные комбинации параметров:** Пара (name, code) должна быть уникальной во всей системе.
+**Уникальные комбинации параметров:** (name, code)
 
 ### 2. Информация, возвращаемая при успешном создании
 
-| Параметр | Что хранится | Тип |
-|----------|--------------|-----|
-| id | Уникальный номер отделения | integer |
-| name | Название отделения | string |
-| code | Шифр направления подготовки | string |
-| head_name | ФИО заведующего отделением | string |
-| head_specialty | Специальность заведующего | string или null |
-| head_phone | Телефон заведующего | string или null |
-| head_email | Email заведующего | string или null |
-| head_cabinet_id | Номер кабинета заведующего | integer или null |
-| reception_is_active | Активен ли приём (да/нет) | boolean |
-| reception_schedule | Время приёма заведующего | string или null |
-| created_at | Дата и время создания записи | datetime |
+| Параметр | Тип |
+|----------|-----|
+| id | integer |
+| name | string |
+| code | string |
+| head_name | string |
+| head_specialty | string или null |
+| head_phone | string или null |
+| head_email | string или null |
+| head_cabinet_id | integer или null |
+| reception_is_active | boolean |
+| reception_schedule | string или null |
+| created_at | datetime |
+| is_active | boolean |
 
----
+## Изменить сущность по ID
 
-### 3. Изменить сущность по ID
-
-#### 3.1. Информация для изменения сущности
+### 3. Информация для изменения сущности
 
 | Параметр | Пояснение | Обязательность | Тип | Ограничение |
 |----------|-----------|----------------|-----|-------------|
-| name | Название отделения | Нет | string | 2-200 символов, уникально в паре с code |
-| code | Шифр направления подготовки | Нет | string | 2-20 символов, формат 00.00.00 или 00.00.00.00, уникально в паре с name |
+| name | Название отделения | Нет | string | 2-200 символов |
+| code | Шифр направления подготовки | Нет | string | 2-20 символов |
 | head_name | ФИО заведующего отделением | Нет | string | 2-150 символов |
-| head_specialty | Специальность заведующего | Нет | string или null | 2-200 символов |
-| head_phone | Телефон заведующего | Нет | string или null | формат +7XXXXXXXXXX |
-| head_email | Email заведующего | Нет | string или null | формат email |
-| head_cabinet_id | Номер кабинета заведующего | Нет | integer или null | положительное число |
+| head_specialty | Специальность заведующего | Нет | string | 2-200 символов |
+| head_phone | Телефон заведующего | Нет | string | до 20 символов |
+| head_email | Email заведующего | Нет | string | до 255 символов |
+| head_cabinet_id | Номер кабинета заведующего | Нет | integer | любое целое число |
 | reception_is_active | Активен ли приём | Нет | boolean | true/false |
-| reception_schedule | Время приёма заведующего | Нет | string или null | до 500 символов |
+| reception_schedule | Время приёма заведующего | Нет | string | до 500 символов |
 
-#### 3.2. Информация, возвращаемая при успешном изменении
+### 4. Информация, возвращаемая при успешном изменении
 
-| Параметр | Что хранится | Тип |
-|----------|--------------|-----|
+| Параметр | Тип |
+|----------|-----|
+| id | integer |
+| name | string |
+| code | string |
+| head_name | string |
+| head_specialty | string или null |
+| head_phone | string или null |
+| head_email | string или null |
+| head_cabinet_id | integer или null |
+| reception_is_active | boolean |
+| reception_schedule | string или null |
+| created_at | datetime |
+| is_active | boolean |
+
+## Удалить сущность по ID
+
+Вернет `{"deleted": True}`, если отделение было удалено, иначе `{"deleted": False}`
+
+## Получить сущность по ID
+
+### 5. Информация, возвращаемая при успешном поиске
+
+| Параметр | Пояснение | Тип |
+|----------|-----------|-----|
 | id | Уникальный номер отделения | integer |
 | name | Название отделения | string |
 | code | Шифр направления подготовки | string |
@@ -66,71 +88,36 @@
 | head_phone | Телефон заведующего | string или null |
 | head_email | Email заведующего | string или null |
 | head_cabinet_id | Номер кабинета заведующего | integer или null |
-| reception_is_active | Активен ли приём (да/нет) | boolean |
+| reception_is_active | Активен ли приём | boolean |
 | reception_schedule | Время приёма заведующего | string или null |
 | created_at | Дата и время создания записи | datetime |
+| is_active | Активна ли запись | boolean |
 
----
+## Получить список сущностей по заданным параметрам
 
-### 4. Удалить сущность по ID
+### 6. Параметры для получения списка
 
-Вернет `True`, если отделение было закрыто (удалено), иначе вернет `False`.
+| Параметр | Пояснение | Тип |
+|----------|-----------|-----|
+| page | Номер страницы | integer |
+| size | Количество записей на странице | integer |
+| name | Поиск по части названия отделения | string |
 
-**Важно:** Фактически запись из БД не удаляется, а реализуется через булевое поле `is_active`.
+### 7. Информация, возвращаемая в виде списка сущностей
 
----
-
-### 5. Получить сущность по ID
-
-#### 5.1. Информация, возвращаемая при успешном поиске
-
-| Параметр | Что хранится | Тип |
-|----------|--------------|-----|
-| id | Уникальный номер отделения | integer |
-| name | Название отделения | string |
-| code | Шифр направления подготовки | string |
-| head_name | ФИО заведующего отделением | string |
-| head_specialty | Специальность заведующего | string или null |
-| head_phone | Телефон заведующего | string или null |
-| head_email | Email заведующего | string или null |
-| head_cabinet_id | Номер кабинета заведующего | integer или null |
-| reception_is_active | Активен ли приём (да/нет) | boolean |
-| reception_schedule | Время приёма заведующего | string или null |
-| created_at | Дата и время создания записи | datetime |
-
----
-
-### 6. Получить список сущностей по заданным параметрам
-
-#### 6.1. Параметры для получения списка
-
-| Параметр | Пояснение | Обязательность | Тип |
-|----------|-----------|----------------|-----|
-| page | Номер страницы (по умолчанию 1) | Нет | integer |
-| size | Количество записей на странице (по умолчанию 10) | Нет | integer |
-| name | Поиск по части названия отделения (регистронезависимо) | Нет | string |
-| code | Поиск по коду направления подготовки (точное совпадение) | Нет | string |
-| sort_by | Поле для сортировки (name, code, created_at) | Нет | string |
-| sort_order | Направление сортировки (asc, desc) | Нет | string |
-
-#### 6.2. Информация, возвращаемая в виде списка сущностей
-
-| Параметр | Что хранится | Тип |
-|----------|--------------|-----|
-| id | Уникальный номер отделения | integer |
-| name | Название отделения | string |
-| code | Шифр направления подготовки | string |
-| head_name | ФИО заведующего отделением | string |
-| head_specialty | Специальность заведующего | string или null |
-| head_phone | Телефон заведующего | string или null |
-| head_email | Email заведующего | string или null |
-| head_cabinet_id | Номер кабинета заведующего | integer или null |
-| reception_is_active | Активен ли приём (да/нет) | boolean |
-| reception_schedule | Время приёма заведующего | string или null |
-| created_at | Дата и время создания записи | datetime |
-
----
-
-### 7. ER-диаграмма
+| Параметр | Тип |
+|----------|-----|
+| id | integer |
+| name | string |
+| code | string |
+| head_name | string |
+| head_specialty | string или null |
+| head_phone | string или null |
+| head_email | string или null |
+| head_cabinet_id | integer или null |
+| reception_is_active | boolean |
+| reception_schedule | string или null |
+| created_at | datetime |
+| is_active | boolean |
 
 ![ER-диаграмма](erd.png)

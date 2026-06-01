@@ -1,12 +1,12 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, status
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from peewee import IntegrityError
 from models import Department, init_db, db
 
 app = FastAPI(title="Faculty Service")
 
-# Схемы ответов (строго по документации)
+# Схемы ответов
 class DepartmentOut(BaseModel):
     id: int
     name: str
@@ -43,62 +43,139 @@ class DepartmentUpdate(BaseModel):
     reception_is_active: Optional[bool] = None
     reception_schedule: Optional[str] = None
 
+
 @app.on_event("startup")
 def startup():
+    """Открываем соединение с БД при старте"""
     init_db()
 
-@app.post("/departments", response_model=DepartmentOut, status_code=201)
+
+@app.on_event("shutdown")
+def shutdown():
+    """Закрываем соединение с БД при остановке"""
+    if not db.is_closed():
+        db.close()
+
+
+@app.post("/departments", response_model=DepartmentOut, status_code=status.HTTP_201_CREATED)
 def create_department(dept: DepartmentCreate):
-    db.connect()
+    """Создание нового отделения"""
     try:
         new_dept = Department.create(**dept.dict())
-        db.close()
         return new_dept.to_dict()
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Отделение с таким названием и кодом уже существует"
+        )
     except Exception as e:
-        db.close()
-        raise HTTPException(400, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
 
 @app.get("/departments/{dept_id}", response_model=DepartmentOut)
 def get_department(dept_id: int):
-    db.connect()
-    dept = Department.get_or_none(Department.id == dept_id)
-    db.close()
-    if not dept or not dept.is_active:
-        raise HTTPException(404, "Отделение не найдено")
-    return dept.to_dict()
+    """Получение отделения по ID"""
+    try:
+        dept = Department.get_or_none(
+            (Department.id == dept_id) & (Department.is_active == True)
+        )
+        if not dept:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Отделение не найдено"
+            )
+        return dept.to_dict()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
 
 @app.get("/departments", response_model=List[DepartmentOut])
 def list_departments(
-    page: int = Query(1, ge=1),
-    size: int = Query(10, ge=1, le=100),
-    name: Optional[str] = None
+    page: int = Query(1, ge=1, description="Номер страницы"),
+    size: int = Query(10, ge=1, le=100, description="Количество записей на странице"),
+    name: Optional[str] = Query(None, description="Поиск по названию")
 ):
-    db.connect()
-    query = Department.get_active()
-    if name:
-        query = query.where(Department.name.contains(name))
-    query = query.order_by(Department.id)
-    offset = (page - 1) * size
-    items = list(query.offset(offset).limit(size))
-    db.close()
-    return [item.to_dict() for item in items]
+    """Получение списка отделений с пагинацией и фильтрацией"""
+    try:
+        query = Department.get_active()
+        if name:
+            query = query.where(Department.name.contains(name))
+        query = query.order_by(Department.id)
+        offset = (page - 1) * size
+        items = list(query.offset(offset).limit(size))
+        return [item.to_dict() for item in items]
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
 
 @app.put("/departments/{dept_id}", response_model=DepartmentOut)
 def update_department(dept_id: int, dept: DepartmentUpdate):
-    db.connect()
-    updated_dict = Department.update_by_id(dept_id, **dept.dict(exclude_unset=True))
-    db.close()
-    if not updated_dict or not updated_dict['is_active']:
-        raise HTTPException(404, "Отделение не найдено")
-    return updated_dict
+    """Обновление отделения по ID"""
+    try:
+        # Проверяем существование активной записи
+        existing = Department.get_or_none(
+            (Department.id == dept_id) & (Department.is_active == True)
+        )
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Отделение не найдено"
+            )
+        
+        # Обновляем
+        updated_dict = Department.update_by_id(dept_id, **dept.dict(exclude_unset=True))
+        if not updated_dict:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Отделение не найдено"
+            )
+        return updated_dict
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Отделение с таким названием и кодом уже существует"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
 
 @app.delete("/departments/{dept_id}")
 def delete_department(dept_id: int):
-    db.connect()
-    result = Department.delete_by_id(dept_id)
-    db.close()
-    return result
+    """Мягкое удаление отделения по ID"""
+    try:
+        result = Department.delete_by_id(dept_id)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
 
 @app.get("/")
 def root():
-    return {"service": "Faculty Service", "version": "1.0"}
+    return {
+        "service": "Faculty Service",
+        "version": "1.0",
+        "endpoints": {
+            "POST /departments": "Создать отделение",
+            "GET /departments": "Список отделений",
+            "GET /departments/{id}": "Получить по ID",
+            "PUT /departments/{id}": "Обновить",
+            "DELETE /departments/{id}": "Удалить"
+        }
+    }

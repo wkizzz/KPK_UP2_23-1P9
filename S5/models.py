@@ -25,7 +25,6 @@ class Department(Model):
         )
 
     def save(self, *args, **kwargs):
-        # Дополнительная валидация для форматов
         if not re.match(r'^\d{2}\.\d{2}\.\d{2}$', self.code):
             raise ValueError("Код должен быть в формате 09.02.07")
         if self.head_phone and not re.match(r'^\+7\d{10}$', self.head_phone):

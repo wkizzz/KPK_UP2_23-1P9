@@ -21,33 +21,33 @@ class Department(Model):
         database = db
         table_name = 'departments'
         indexes = (
-            (('name', 'code'), True),  # составной уникальный индекс
+            (('name', 'code'), True),
         )
 
+    def save(self, *args, **kwargs):
+        if len(self.name) < 2:
+            raise ValueError("Название отделения должно быть не менее 2 символов")
+        if len(self.code) < 2:
+            raise ValueError("Код должен быть не менее 2 символов")
+        if len(self.head_name) < 2:
+            raise ValueError("ФИО заведующего должно быть не менее 2 символов")
+        if self.head_specialty and len(self.head_specialty) < 2:
+            raise ValueError("Специальность должна быть не менее 2 символов")
+        if not re.match(r'^\d{2}\.\d{2}\.\d{2}$', self.code):
+            raise ValueError("Код должен быть в формате 09.02.07")
+        if self.head_phone and not re.match(r'^\+7\d{10}$', self.head_phone):
+            raise ValueError("Телефон должен быть в формате +7XXXXXXXXXX")
+        if self.head_email and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', self.head_email):
+            raise ValueError("Неверный формат email")
+        if self.head_cabinet_id is not None and self.head_cabinet_id <= 0:
+            raise ValueError("Номер кабинета должен быть положительным числом")
+        super().save(*args, **kwargs)
+
 def init_db():
-    """Инициализация БД"""
     db.connect()
     db.create_tables([Department], safe=True)
     db.close()
 
-def validate_phone(phone):
-    """Проверка телефона: +7XXXXXXXXXX"""
-    if phone is None:
-        return True
-    return bool(re.match(r'^\+7\d{10}$', phone))
-
-def validate_email(email):
-    """Проверка email"""
-    if email is None:
-        return True
-    return bool(re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email))
-
-def validate_code(code):
-    """Проверка кода: цифры и точки (пример: 09.02.07)"""
-    return bool(re.match(r'^\d{2}\.\d{2}\.\d{2}$', code))
-
-def validate_cabinet_id(cabinet_id):
-    """Проверка кабинета: положительное число"""
-    if cabinet_id is None:
-        return True
-    return cabinet_id > 0
+if __name__ == "__main__":
+    init_db()
+    print("База данных инициализирована")

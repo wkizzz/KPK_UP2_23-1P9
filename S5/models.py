@@ -155,7 +155,6 @@ def init_db():
     db.create_tables([Department], safe=True)
     return db
 
-
 if __name__ == "__main__":
     init_db()
     print("База данных инициализирована")

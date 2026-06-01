@@ -30,9 +30,6 @@ def init_db():
     db.create_tables([Department], safe=True)
     db.close()
 
-
-# ==================== Валидаторы ====================
-
 def validate_phone(phone):
     """Проверка телефона: +7XXXXXXXXXX"""
     if phone is None:

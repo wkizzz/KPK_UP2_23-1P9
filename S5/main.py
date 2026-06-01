@@ -156,8 +156,7 @@ app = FastAPI(
 @app.post("/departments", response_model=DepartmentOut, status_code=201)
 def create_department(dept: DepartmentCreate):
     db.connect()
-    
-    # Проверка на дубликаты уже через составной индекс в БД
+
     try:
         new_dept = Department.create(
             name=dept.name,

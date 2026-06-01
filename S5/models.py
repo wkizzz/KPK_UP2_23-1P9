@@ -85,7 +85,6 @@ class Department(Model):
 
         super().save(*args, **kwargs)
 
-
 def init_db():
     db.connect()
     db.create_tables([Department], safe=True)

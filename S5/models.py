@@ -5,7 +5,6 @@ import re
 db = SqliteDatabase('faculty_service.db')
 
 class Department(Model):
-    """Модель отделения СПО"""
     name = CharField(max_length=200, null=False)
     code = CharField(max_length=20, null=False)
     head_name = CharField(max_length=150, null=False)

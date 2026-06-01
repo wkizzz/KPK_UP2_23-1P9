@@ -1,6 +1,6 @@
-# Вариант S5 - Faculty Service
+# S5 Faculty Service - Справочник отделений СПО
 
-## Название сервиса: Справочник отделений СПО
+## ER-диаграмма
 
 ## Сущность: Department (Отделение)
 
@@ -28,12 +28,12 @@
 | name | string |
 | code | string |
 | head_name | string |
-| head_specialty | string или null |
-| head_phone | string или null |
-| head_email | string или null |
-| head_cabinet_id | integer или null |
+| head_specialty | string \| null |
+| head_phone | string \| null |
+| head_email | string \| null |
+| head_cabinet_id | integer \| null |
 | reception_is_active | boolean |
-| reception_schedule | string или null |
+| reception_schedule | string \| null |
 | created_at | datetime |
 | is_active | boolean |
 
@@ -61,18 +61,18 @@
 | name | string |
 | code | string |
 | head_name | string |
-| head_specialty | string или null |
-| head_phone | string или null |
-| head_email | string или null |
-| head_cabinet_id | integer или null |
+| head_specialty | string \| null |
+| head_phone | string \| null |
+| head_email | string \| null |
+| head_cabinet_id | integer \| null |
 | reception_is_active | boolean |
-| reception_schedule | string или null |
+| reception_schedule | string \| null |
 | created_at | datetime |
 | is_active | boolean |
 
 ## Удалить сущность по ID
 
-Вернет `{"deleted": True}`, если отделение было удалено, иначе `{"deleted": False}`
+Возвращает `True`, если отделение было удалено, иначе `False`.
 
 ## Получить сущность по ID
 
@@ -84,12 +84,12 @@
 | name | Название отделения | string |
 | code | Шифр направления подготовки | string |
 | head_name | ФИО заведующего отделением | string |
-| head_specialty | Специальность заведующего | string или null |
-| head_phone | Телефон заведующего | string или null |
-| head_email | Email заведующего | string или null |
-| head_cabinet_id | Номер кабинета заведующего | integer или null |
+| head_specialty | Специальность заведующего | string \| null |
+| head_phone | Телефон заведующего | string \| null |
+| head_email | Email заведующего | string \| null |
+| head_cabinet_id | Номер кабинета заведующего | integer \| null |
 | reception_is_active | Активен ли приём | boolean |
-| reception_schedule | Время приёма заведующего | string или null |
+| reception_schedule | Время приёма заведующего | string \| null |
 | created_at | Дата и время создания записи | datetime |
 | is_active | Активна ли запись | boolean |
 
@@ -97,11 +97,11 @@
 
 ### 6. Параметры для получения списка
 
-| Параметр | Пояснение | Тип |
-|----------|-----------|-----|
-| page | Номер страницы | integer |
-| size | Количество записей на странице | integer |
-| name | Поиск по части названия отделения | string |
+| Параметр | Пояснение | Обязательность | Тип |
+|----------|-----------|----------------|-----|
+| page | Номер страницы | Нет | integer |
+| size | Количество записей на странице | Нет | integer |
+| name | Поиск по части названия отделения | Нет | string |
 
 ### 7. Информация, возвращаемая в виде списка сущностей
 
@@ -111,13 +111,13 @@
 | name | string |
 | code | string |
 | head_name | string |
-| head_specialty | string или null |
-| head_phone | string или null |
-| head_email | string или null |
-| head_cabinet_id | integer или null |
+| head_specialty | string \| null |
+| head_phone | string \| null |
+| head_email | string \| null |
+| head_cabinet_id | integer \| null |
 | reception_is_active | boolean |
-| reception_schedule | string или null |
+| reception_schedule | string \| null |
 | created_at | datetime |
 | is_active | boolean |
 
-![ER-диаграмма](erd.png)
+![ER-диаграмма](./erd.png)

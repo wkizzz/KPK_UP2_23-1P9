@@ -4,17 +4,13 @@ from datetime import datetime
 db = SqliteDatabase('faculty_service.db')
 
 class Department(Model):
-    """Модель отделения СПО"""
-    name = CharField(max_length=200, null=False, constraints=[Check("length(name) >= 2")])
-    code = CharField(max_length=20, null=False, constraints=[
-        Check("length(code) >= 2"),
-        Check("length(code) <= 20")
-    ])
-    head_name = CharField(max_length=150, null=False, constraints=[Check("length(head_name) >= 2")])
+    name = CharField(max_length=200, null=False)
+    code = CharField(max_length=20, null=False)
+    head_name = CharField(max_length=150, null=False)
     head_specialty = CharField(max_length=200, null=True)
     head_phone = CharField(max_length=20, null=True)
     head_email = CharField(max_length=255, null=True)
-    head_cabinet_id = IntegerField(null=True)  # любые целые числа, включая 0 и отрицательные
+    head_cabinet_id = IntegerField(null=True)
     reception_is_active = BooleanField(default=False)
     reception_schedule = CharField(max_length=500, null=True)
     created_at = DateTimeField(default=datetime.now)
@@ -23,33 +19,60 @@ class Department(Model):
     class Meta:
         database = db
         table_name = 'departments'
-        indexes = (
-            (('name', 'code'), True),
-        )
+        indexes = ((('name', 'code'), True),)
+        constraints = [
+            Check("length(name) >= 2"),
+            Check("length(code) >= 2 AND length(code) <= 20"),
+            Check("length(head_name) >= 2")
+        ]
+
+    @classmethod
+    def get_by_id(cls, dept_id):
+        try:
+            obj = cls.get((cls.id == dept_id) & (cls.is_active == True))
+            return obj.to_dict()
+        except cls.DoesNotExist:
+            return None
+
+    @classmethod
+    def get_list(cls, page=1, size=10, name=None):
+        query = cls.select().where(cls.is_active == True)
+        if name:
+            query = query.where(cls.name.contains(name))
+        query = query.order_by(cls.id)
+        offset = (page - 1) * size
+        items = list(query.offset(offset).limit(size))
+        return [item.to_dict() for item in items]
 
     @classmethod
     def delete_by_id(cls, dept_id):
-        """Мягкое удаление: возвращает {"deleted": True/False}"""
         rows = cls.update(is_active=False).where(cls.id == dept_id).execute()
-        return {"deleted": rows > 0}
+        return rows > 0  # True/False
 
     @classmethod
     def update_by_id(cls, dept_id, **kwargs):
-        """Обновление сущности по ID, возвращает словарь с обновлёнными данными"""
         forbidden = {'id', 'created_at', 'is_active'}
-        update_data = {k: v for k, v in kwargs.items() if v is not None and k not in forbidden}
-        if update_data:
-            cls.update(**update_data).where(cls.id == dept_id).execute()
-        obj = cls.get_or_none(cls.id == dept_id)
-        return obj.to_dict() if obj else None
+        update_data = {}
+        for k, v in kwargs.items():
+            if k in forbidden:
+                continue
+            if v is not None:
+                update_data[k] = v
+            else:
+                # Явное обнуление: передаём None в базу
+                update_data[k] = None
 
-    @classmethod
-    def get_active(cls):
-        """Только активные записи"""
-        return cls.select().where(cls.is_active == True)
+        if update_data:
+            try:
+                cls.update(**update_data).where(cls.id == dept_id).execute()
+            except Exception as e:
+                if 'UNIQUE' in str(e):
+                    raise ValueError("Нарушение уникальности name+code")
+                raise
+        obj = cls.get_or_none(cls.id == dept_id)
+        return obj.to_dict() if obj and obj.is_active else None
 
     def to_dict(self):
-        """Сериализация для API-ответов"""
         return {
             'id': self.id,
             'name': self.name,
@@ -66,24 +89,23 @@ class Department(Model):
         }
 
     def save(self, *args, **kwargs):
-        # Преобразуем пустые строки в None для опциональных полей
-        for field in ('head_phone', 'head_email', 'head_specialty', 'reception_schedule'):
-            val = getattr(self, field)
+        # Преобразование пустых строк в None
+        for f in ('head_phone', 'head_email', 'head_specialty', 'reception_schedule'):
+            val = getattr(self, f)
             if val == "":
-                setattr(self, field, None)
+                setattr(self, f, None)
 
-        # Проверка минимальной длины для всех строковых полей (кроме already checked)
-        if self.head_specialty is not None and len(self.head_specialty) < 2:
-            raise ValueError("Специальность должна быть не менее 2 символов")
-        if self.head_phone is not None and len(self.head_phone) < 2:
-            raise ValueError("Телефон должен быть не менее 2 символов")
-        if self.head_email is not None and len(self.head_email) < 2:
-            raise ValueError("Email должен быть не менее 2 символов")
+        # Проверки только по требованиям
+        if self.head_specialty is not None and len(self.head_specialty) > 200:
+            raise ValueError("Специальность не должна превышать 200 символов")
+        if self.head_phone is not None and len(self.head_phone) > 20:
+            raise ValueError("Телефон не должен превышать 20 символов")
+        if self.head_email is not None and len(self.head_email) > 255:
+            raise ValueError("Email не должен превышать 255 символов")
         if self.reception_schedule is not None and len(self.reception_schedule) > 500:
             raise ValueError("Время приёма не должно превышать 500 символов")
 
         super().save(*args, **kwargs)
-
 
 def init_db():
     db.connect()

@@ -1,12 +1,118 @@
-from fastapi import FastAPI, HTTPException, Query, status
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel, field_validator
 from typing import Optional, List
-from peewee import IntegrityError
+from datetime import datetime
 from models import Department, init_db, db
 
 app = FastAPI(title="Faculty Service")
 
-# Схемы ответов
+# ----- Схемы с валидацией -----
+class DepartmentCreate(BaseModel):
+    name: str
+    code: str
+    head_name: str
+    head_specialty: Optional[str] = None
+    head_phone: Optional[str] = None
+    head_email: Optional[str] = None
+    head_cabinet_id: Optional[int] = None
+    reception_is_active: bool = False
+    reception_schedule: Optional[str] = None
+
+    @field_validator('name')
+    def name_len(cls, v):
+        if not (2 <= len(v) <= 200):
+            raise ValueError('Длина name 2-200')
+        return v
+
+    @field_validator('code')
+    def code_len(cls, v):
+        if not (2 <= len(v) <= 20):
+            raise ValueError('Длина code 2-20')
+        return v
+
+    @field_validator('head_name')
+    def head_name_len(cls, v):
+        if not (2 <= len(v) <= 150):
+            raise ValueError('Длина head_name 2-150')
+        return v
+
+    @field_validator('head_specialty')
+    def head_specialty_len(cls, v):
+        if v is not None and (len(v) < 2 or len(v) > 200):
+            raise ValueError('head_specialty 2-200')
+        return v
+
+    @field_validator('head_phone')
+    def head_phone_len(cls, v):
+        if v is not None and len(v) > 20:
+            raise ValueError('head_phone не более 20 символов')
+        return v
+
+    @field_validator('head_email')
+    def head_email_len(cls, v):
+        if v is not None and len(v) > 255:
+            raise ValueError('head_email не более 255 символов')
+        return v
+
+    @field_validator('reception_schedule')
+    def reception_schedule_len(cls, v):
+        if v is not None and len(v) > 500:
+            raise ValueError('reception_schedule не более 500 символов')
+        return v
+
+class DepartmentUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    head_name: Optional[str] = None
+    head_specialty: Optional[str] = None
+    head_phone: Optional[str] = None
+    head_email: Optional[str] = None
+    head_cabinet_id: Optional[int] = None
+    reception_is_active: Optional[bool] = None
+    reception_schedule: Optional[str] = None
+
+    @field_validator('name')
+    def name_len(cls, v):
+        if v is not None and not (2 <= len(v) <= 200):
+            raise ValueError('Длина name 2-200')
+        return v
+
+    @field_validator('code')
+    def code_len(cls, v):
+        if v is not None and not (2 <= len(v) <= 20):
+            raise ValueError('Длина code 2-20')
+        return v
+
+    @field_validator('head_name')
+    def head_name_len(cls, v):
+        if v is not None and not (2 <= len(v) <= 150):
+            raise ValueError('Длина head_name 2-150')
+        return v
+
+    @field_validator('head_specialty')
+    def head_specialty_len(cls, v):
+        if v is not None and (len(v) < 2 or len(v) > 200):
+            raise ValueError('head_specialty 2-200')
+        return v
+
+    @field_validator('head_phone')
+    def head_phone_len(cls, v):
+        if v is not None and len(v) > 20:
+            raise ValueError('head_phone не более 20 символов')
+        return v
+
+    @field_validator('head_email')
+    def head_email_len(cls, v):
+        if v is not None and len(v) > 255:
+            raise ValueError('head_email не более 255 символов')
+        return v
+
+    @field_validator('reception_schedule')
+    def reception_schedule_len(cls, v):
+        if v is not None and len(v) > 500:
+            raise ValueError('reception_schedule не более 500 символов')
+        return v
+
 class DepartmentOut(BaseModel):
     id: int
     name: str
@@ -21,161 +127,62 @@ class DepartmentOut(BaseModel):
     created_at: str
     is_active: bool
 
-class DepartmentCreate(BaseModel):
-    name: str
-    code: str
-    head_name: str
-    head_specialty: Optional[str] = None
-    head_phone: Optional[str] = None
-    head_email: Optional[str] = None
-    head_cabinet_id: Optional[int] = None
-    reception_is_active: bool = False
-    reception_schedule: Optional[str] = None
-
-class DepartmentUpdate(BaseModel):
-    name: Optional[str] = None
-    code: Optional[str] = None
-    head_name: Optional[str] = None
-    head_specialty: Optional[str] = None
-    head_phone: Optional[str] = None
-    head_email: Optional[str] = None
-    head_cabinet_id: Optional[int] = None
-    reception_is_active: Optional[bool] = None
-    reception_schedule: Optional[str] = None
-
-
+# ----- API -----
 @app.on_event("startup")
 def startup():
-    """Открываем соединение с БД при старте"""
     init_db()
 
-
-@app.on_event("shutdown")
-def shutdown():
-    """Закрываем соединение с БД при остановке"""
-    if not db.is_closed():
-        db.close()
-
-
-@app.post("/departments", response_model=DepartmentOut, status_code=status.HTTP_201_CREATED)
+@app.post("/departments", response_model=DepartmentOut, status_code=201)
 def create_department(dept: DepartmentCreate):
-    """Создание нового отделения"""
+    db.connect()
     try:
         new_dept = Department.create(**dept.dict())
+        db.close()
         return new_dept.to_dict()
-    except IntegrityError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Отделение с таким названием и кодом уже существует"
-        )
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-
+        db.close()
+        raise HTTPException(400, str(e))
 
 @app.get("/departments/{dept_id}", response_model=DepartmentOut)
 def get_department(dept_id: int):
-    """Получение отделения по ID"""
-    try:
-        dept = Department.get_or_none(
-            (Department.id == dept_id) & (Department.is_active == True)
-        )
-        if not dept:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Отделение не найдено"
-            )
-        return dept.to_dict()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-
+    db.connect()
+    data = Department.get_by_id(dept_id)
+    db.close()
+    if not data:
+        raise HTTPException(404, "Отделение не найдено")
+    return data
 
 @app.get("/departments", response_model=List[DepartmentOut])
 def list_departments(
-    page: int = Query(1, ge=1, description="Номер страницы"),
-    size: int = Query(10, ge=1, le=100, description="Количество записей на странице"),
-    name: Optional[str] = Query(None, description="Поиск по названию")
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
+    name: Optional[str] = None
 ):
-    """Получение списка отделений с пагинацией и фильтрацией"""
-    try:
-        query = Department.get_active()
-        if name:
-            query = query.where(Department.name.contains(name))
-        query = query.order_by(Department.id)
-        offset = (page - 1) * size
-        items = list(query.offset(offset).limit(size))
-        return [item.to_dict() for item in items]
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-
+    db.connect()
+    items = Department.get_list(page=page, size=size, name=name)
+    db.close()
+    return items
 
 @app.put("/departments/{dept_id}", response_model=DepartmentOut)
 def update_department(dept_id: int, dept: DepartmentUpdate):
-    """Обновление отделения по ID"""
+    db.connect()
     try:
-        # Проверяем существование активной записи
-        existing = Department.get_or_none(
-            (Department.id == dept_id) & (Department.is_active == True)
-        )
-        if not existing:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Отделение не найдено"
-            )
-        
-        # Обновляем
-        updated_dict = Department.update_by_id(dept_id, **dept.dict(exclude_unset=True))
-        if not updated_dict:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Отделение не найдено"
-            )
-        return updated_dict
-    except IntegrityError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Отделение с таким названием и кодом уже существует"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        updated_dict = Department.update_by_id(dept_id, **dept.dict(exclude_unset=False))
+    except ValueError as e:
+        db.close()
+        raise HTTPException(400, str(e))
+    db.close()
+    if not updated_dict:
+        raise HTTPException(404, "Отделение не найдено")
+    return updated_dict
 
-
-@app.delete("/departments/{dept_id}")
+@app.delete("/departments/{dept_id}", response_model=bool)
 def delete_department(dept_id: int):
-    """Мягкое удаление отделения по ID"""
-    try:
-        result = Department.delete_by_id(dept_id)
-        return result
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-
+    db.connect()
+    result = Department.delete_by_id(dept_id)
+    db.close()
+    return result
 
 @app.get("/")
 def root():
-    return {
-        "service": "Faculty Service",
-        "version": "1.0",
-        "endpoints": {
-            "POST /departments": "Создать отделение",
-            "GET /departments": "Список отделений",
-            "GET /departments/{id}": "Получить по ID",
-            "PUT /departments/{id}": "Обновить",
-            "DELETE /departments/{id}": "Удалить"
-        }
-    }
+    return {"service": "Faculty Service", "version": "1.0"}

@@ -26,42 +26,50 @@ class Department(Model):
 
     @classmethod
     def get_by_id(cls, dept_id):
-        """Получение сущности по ID (только активные)"""
+        """Возвращает словарь с данными отделения или None"""
         try:
-            return cls.get((cls.id == dept_id) & (cls.is_active == True))
+            obj = cls.get((cls.id == dept_id) & (cls.is_active == True))
+            return obj.to_dict()
         except cls.DoesNotExist:
             return None
 
     @classmethod
     def get_list(cls, page=1, size=10, name=None):
-        """Получение списка с пагинацией и фильтром по name"""
+        """Возвращает список словарей с пагинацией и фильтром по name"""
         query = cls.select().where(cls.is_active == True)
         if name:
             query = query.where(cls.name.contains(name))
         query = query.order_by(cls.id)
         offset = (page - 1) * size
-        return list(query.offset(offset).limit(size))
+        items = list(query.offset(offset).limit(size))
+        return [item.to_dict() for item in items]
 
     @classmethod
     def delete_by_id(cls, dept_id):
-        """Мягкое удаление"""
+        """Мягкое удаление, возвращает True/False"""
         rows = cls.update(is_active=False).where(cls.id == dept_id).execute()
         return rows > 0
 
     @classmethod
     def update_by_id(cls, dept_id, **kwargs):
-        """Обновление сущности по ID"""
-        forbidden = {'id', 'created_at', 'is_active'}
-        update_data = {}
-        for k, v in kwargs.items():
-            if k in forbidden:
-                continue
-            if v is not None:
-                update_data[k] = v
+        """Обновление сущности с полной валидацией через save()"""
+        obj = cls.get_or_none(cls.id == dept_id)
+        if not obj or not obj.is_active:
+            return None
 
-        if update_data:
-            cls.update(**update_data).where(cls.id == dept_id).execute()
-        return cls.get_or_none(cls.id == dept_id)
+        # Обновляем только переданные поля, исключая неизменяемые
+        for key, value in kwargs.items():
+            if value is not None and key not in ('id', 'created_at', 'is_active'):
+                if hasattr(obj, key):
+                    setattr(obj, key, value)
+
+        # Сохраняем с валидацией (вызовет save() с проверками)
+        try:
+            obj.save()
+        except ValueError as e:
+            raise ValueError(f"Ошибка валидации: {e}")
+
+        return obj.to_dict()
 
     def save(self, *args, **kwargs):
         # Преобразование пустых строк в None для опциональных полей
@@ -74,13 +82,13 @@ class Department(Model):
         if self.reception_schedule == "":
             self.reception_schedule = None
 
-        # Проверки обязательных полей на пустую строку
-        if not self.name or self.name.strip() == "":
-            raise ValueError("name не может быть пустым")
-        if not self.code or self.code.strip() == "":
-            raise ValueError("code не может быть пустым")
-        if not self.head_name or self.head_name.strip() == "":
-            raise ValueError("head_name не может быть пустым")
+        # Проверка типа (строка) и пустоты для обязательных полей
+        if not isinstance(self.name, str) or not self.name or self.name.strip() == "":
+            raise ValueError("name должен быть непустой строкой")
+        if not isinstance(self.code, str) or not self.code or self.code.strip() == "":
+            raise ValueError("code должен быть непустой строкой")
+        if not isinstance(self.head_name, str) or not self.head_name or self.head_name.strip() == "":
+            raise ValueError("head_name должен быть непустой строкой")
 
         # Валидация длины
         if len(self.name) < 2 or len(self.name) > 200:
@@ -101,7 +109,7 @@ class Department(Model):
         super().save(*args, **kwargs)
 
     def to_dict(self):
-        """Сериализация для ответов"""
+        """Сериализация в словарь, created_at всегда строка"""
         return {
             'id': self.id,
             'name': self.name,
@@ -113,7 +121,7 @@ class Department(Model):
             'head_cabinet_id': self.head_cabinet_id,
             'reception_is_active': self.reception_is_active,
             'reception_schedule': self.reception_schedule,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else datetime.now().isoformat(),
             'is_active': self.is_active,
         }
 

@@ -63,12 +63,8 @@ class Department(Model):
                 if hasattr(obj, key):
                     setattr(obj, key, value)
 
-        # Сохраняем с валидацией (вызовет save() с проверками)
-        try:
-            obj.save()
-        except ValueError as e:
-            raise ValueError(f"Ошибка валидации: {e}")
-
+        # Сохраняем с валидацией (пробрасываем исключение без перехвата)
+        obj.save()
         return obj.to_dict()
 
     def save(self, *args, **kwargs):
@@ -106,10 +102,21 @@ class Department(Model):
         if self.reception_schedule is not None and (len(self.reception_schedule) < 2 or len(self.reception_schedule) > 500):
             raise ValueError("reception_schedule должен быть 2-500 символов")
 
+        # Проверка уникальности комбинации (name, code) при создании и обновлении
+        conflict = Department.select().where(
+            (Department.name == self.name) &
+            (Department.code == self.code) &
+            (Department.is_active == True)
+        )
+        if self.id:
+            conflict = conflict.where(Department.id != self.id)
+        if conflict.exists():
+            raise ValueError("Отделение с таким name и code уже существует")
+
         super().save(*args, **kwargs)
 
     def to_dict(self):
-        """Сериализация в словарь, created_at всегда строка"""
+        """Сериализация в словарь, created_at возвращает ISO строку или None"""
         return {
             'id': self.id,
             'name': self.name,
@@ -121,7 +128,7 @@ class Department(Model):
             'head_cabinet_id': self.head_cabinet_id,
             'reception_is_active': self.reception_is_active,
             'reception_schedule': self.reception_schedule,
-            'created_at': self.created_at.isoformat() if self.created_at else datetime.now().isoformat(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
             'is_active': self.is_active,
         }
 

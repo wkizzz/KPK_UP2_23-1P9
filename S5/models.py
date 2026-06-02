@@ -17,7 +17,8 @@ class Department(Model):
     name = CharField(max_length=200, null=False)
     code = CharField(max_length=20, null=False)
     head_name = CharField(max_length=150, null=False)
-    head_cabinet_id = CharField(max_length=3, null=False)   # обязательно, 3 символа
+    head_cabinet_id = CharField(max_length=3, null=False)   # обязательно, 3 цифры
+    head_phone = CharField(max_length=20, null=True)        # исправлено: null=True
     reception_is_active = BooleanField(default=False)
     reception_start = IntegerField(null=True)
     reception_end = IntegerField(null=True)
@@ -42,9 +43,31 @@ class FacultyDepartment(Model):
             (('faculty', 'department'), True),
         )
 
-# Методы Department (get_by_id, get_list, delete_by_id, update_by_id, save, to_dict)
-# Ниже приведены с учётом изменений
+    @classmethod
+    def add_relation(cls, faculty_id, department_id):
+        faculty = Faculty.get_or_none(Faculty.id == faculty_id)
+        department = Department.get_or_none(Department.id == department_id)
+        if not faculty or not department:
+            return False
+        cls.get_or_create(faculty=faculty, department=department)
+        return True
 
+    @classmethod
+    def remove_relation(cls, faculty_id, department_id):
+        return cls.delete().where(
+            (cls.faculty == faculty_id) & (cls.department == department_id)
+        ).execute() > 0
+
+    @classmethod
+    def get_departments_by_faculty(cls, faculty_id):
+        return [fd.department for fd in cls.select().where(cls.faculty == faculty_id)]
+
+    @classmethod
+    def get_faculties_by_department(cls, department_id):
+        return [fd.faculty for fd in cls.select().where(cls.department == department_id)]
+
+
+# ---------- Методы Department (CRUD) ----------
     @classmethod
     def get_by_id(cls, dept_id):
         try:
@@ -82,14 +105,15 @@ class FacultyDepartment(Model):
         if not obj or not obj.is_active:
             return False
         for key, value in kwargs.items():
-            if value is not None and key not in ('id', 'created_at', 'is_active'):
+            if key not in ('id', 'created_at', 'is_active'):
                 if hasattr(obj, key):
+                    # Позволяем установить None для опциональных полей
                     setattr(obj, key, value)
         obj.save()
         return obj.to_dict()
 
     def save(self, *args, **kwargs):
-        # Преобразование пустых строк в None для опциональных полей
+        # Пустые строки → None для опциональных полей
         if self.head_phone == "":
             self.head_phone = None
         if self.reception_start == "":
@@ -98,16 +122,16 @@ class FacultyDepartment(Model):
             self.reception_end = None
 
         # Обязательные поля: name, code, head_name, head_cabinet_id
-        if not isinstance(self.name, str) or not self.name or self.name.strip() == "":
+        if not self.name or self.name.strip() == "":
             raise ValueError("name должен быть непустой строкой")
-        if not isinstance(self.code, str) or not self.code or self.code.strip() == "":
+        if not self.code or self.code.strip() == "":
             raise ValueError("code должен быть непустой строкой")
-        if not isinstance(self.head_name, str) or not self.head_name or self.head_name.strip() == "":
+        if not self.head_name or self.head_name.strip() == "":
             raise ValueError("head_name должен быть непустой строкой")
-        if not isinstance(self.head_cabinet_id, str) or not self.head_cabinet_id or self.head_cabinet_id.strip() == "":
+        if not self.head_cabinet_id or self.head_cabinet_id.strip() == "":
             raise ValueError("head_cabinet_id должен быть непустой строкой")
 
-        # Валидация длины
+        # Длины
         if len(self.name) < 2 or len(self.name) > 200:
             raise ValueError("name 2-200 символов")
         if len(self.code) < 2 or len(self.code) > 20:
@@ -115,9 +139,7 @@ class FacultyDepartment(Model):
         if len(self.head_name) < 2 or len(self.head_name) > 150:
             raise ValueError("head_name 2-150 символов")
         if len(self.head_cabinet_id) != 3 or not self.head_cabinet_id.isdigit():
-            raise ValueError("head_cabinet_id должен быть ровно 3 цифры (например, 101)")
-
-        # head_phone (опционально)
+            raise ValueError("head_cabinet_id должен быть ровно 3 цифры")
         if self.head_phone is not None and (len(self.head_phone) < 2 or len(self.head_phone) > 20):
             raise ValueError("head_phone 2-20 символов")
 

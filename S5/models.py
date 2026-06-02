@@ -26,17 +26,18 @@ class Department(Model):
 
     @classmethod
     def get_by_id(cls, dept_id):
-        """Возвращает словарь с данными отделения или None"""
+        """Возвращает словарь с данными отделения или False, если не активно или не найдено"""
         try:
-            obj = cls.get((cls.id == dept_id) & (cls.is_active == True))
+            obj = cls.get(cls.id == dept_id)
+            if not obj.is_active:
+                return False
             return obj.to_dict()
         except cls.DoesNotExist:
-            return None
+            return False
 
     @classmethod
     def get_list(cls, page=1, size=10, name=None):
         """Возвращает список словарей с пагинацией и фильтром по name"""
-        # Валидация параметров пагинации
         if page < 1:
             page = 1
         if size < 1:
@@ -60,10 +61,10 @@ class Department(Model):
 
     @classmethod
     def update_by_id(cls, dept_id, **kwargs):
-        """Обновление сущности с полной валидацией через save()"""
+        """Обновление сущности, возвращает словарь или False, если не активно/не найдено"""
         obj = cls.get_or_none(cls.id == dept_id)
         if not obj or not obj.is_active:
-            return None
+            return False
 
         for key, value in kwargs.items():
             if value is not None and key not in ('id', 'created_at', 'is_active'):
@@ -106,17 +107,16 @@ class Department(Model):
         if self.head_email is not None:
             if len(self.head_email) > 255:
                 raise ValueError("head_email не более 255 символов")
-            # Простая проверка формата email
             if "@" not in self.head_email or "." not in self.head_email.split("@")[-1]:
                 raise ValueError("head_email должен быть корректным email-адресом")
         if self.reception_schedule is not None and (len(self.reception_schedule) < 2 or len(self.reception_schedule) > 500):
             raise ValueError("reception_schedule должен быть 2-500 символов")
 
-        # Проверка head_cabinet_id – должно быть целое число или None
+        # Проверка head_cabinet_id
         if self.head_cabinet_id is not None and not isinstance(self.head_cabinet_id, int):
             raise ValueError("head_cabinet_id должен быть целым числом")
 
-        # Проверка уникальности комбинации (name, code) для всех записей (включая неактивные)
+        # Проверка уникальности name+code по всем записям
         conflict = Department.select().where(
             (Department.name == self.name) &
             (Department.code == self.code)
@@ -129,7 +129,6 @@ class Department(Model):
         super().save(*args, **kwargs)
 
     def to_dict(self):
-        """Сериализация в словарь, created_at возвращает ISO строку или None"""
         return {
             'id': self.id,
             'name': self.name,

@@ -1,20 +1,23 @@
 # S5 Faculty Service - Справочник отделений СПО
 
-## Сущность: Department (Отделение)
+## ER-диаграмма
+
+![ER-диаграмма](erd.png)
+
+## Сущность: Department (Отделение среднего профессионального образования)
 
 ### 1. Информация для создания сущности
 
 | Параметр | Пояснение | Обязательность | Тип | Ограничение | Значение по умолчанию |
 |----------|-----------|----------------|-----|-------------|----------------------|
-| name | Название отделения | Да | string | 2-200 символов | — |
-| code | Шифр направления подготовки | Да | string | 2-20 символов | — |
+| name | Полное наименование отделения СПО | Да | string | 2-200 символов | — |
+| code | Шифр направления подготовки (например, 09.02.07) | Да | string | 2-20 символов | — |
 | head_name | ФИО заведующего отделением | Да | string | 2-150 символов | — |
-| head_specialty | Специальность заведующего | Нет | string | 2-200 символов | null |
-| head_phone | Телефон заведующего | Нет | string | 2-20 символов | null |
-| head_email | Email заведующего | Нет | string | до 255 символов | null |
-| head_cabinet_id | Номер кабинета заведующего | Нет | integer | любое целое число | null |
-| reception_is_active | Активен ли приём | Нет | boolean | true/false | false |
-| reception_schedule | Время приёма заведующего | Нет | string | 2-500 символов | null |
+| head_cabinet_id | Номер кабинета заведующего | Да | string | ровно 3 цифры (например, 101) | — |
+| head_phone | Контактный телефон заведующего | Нет | string | 2-20 символов | null |
+| reception_is_active | Приёмные часы активны? | Нет | boolean | true/false | false |
+| reception_start | Час начала приёма (0-23) | Нет | integer | 0-23 | null |
+| reception_end | Час окончания приёма (0-23) | Нет | integer | 0-23 (≥ начала) | null |
 
 **Уникальные комбинации параметров:** (name, code)
 
@@ -26,88 +29,56 @@
 | name | string |
 | code | string |
 | head_name | string |
-| head_specialty | string \| null |
+| head_cabinet_id | string |
 | head_phone | string \| null |
-| head_email | string \| null |
-| head_cabinet_id | integer \| null |
 | reception_is_active | boolean |
-| reception_schedule | string \| null |
+| reception_start | integer \| null |
+| reception_end | integer \| null |
 | created_at | datetime |
 | is_active | boolean |
 
 ## Изменить сущность по ID
 
-**Параметр пути (URL):** `id` (integer) - уникальный идентификатор отделения
+**Параметр пути:** `id` (integer)
 
-### 3. Информация для изменения сущности (тело запроса)
+### 3. Информация для изменения (тело запроса)
 
 | Параметр | Пояснение | Обязательность | Тип | Ограничение |
 |----------|-----------|----------------|-----|-------------|
 | name | Название отделения | Нет | string | 2-200 символов |
-| code | Шифр направления подготовки | Нет | string | 2-20 символов |
-| head_name | ФИО заведующего отделением | Нет | string | 2-150 символов |
-| head_specialty | Специальность заведующего | Нет | string | 2-200 символов |
-| head_phone | Телефон заведующего | Нет | string | 2-20 символов |
-| head_email | Email заведующего | Нет | string | до 255 символов |
-| head_cabinet_id | Номер кабинета заведующего | Нет | integer | любое целое число |
-| reception_is_active | Активен ли приём | Нет | boolean | true/false |
-| reception_schedule | Время приёма заведующего | Нет | string | 2-500 символов |
+| code | Шифр направления | Нет | string | 2-20 символов |
+| head_name | ФИО заведующего | Нет | string | 2-150 символов |
+| head_cabinet_id | Номер кабинета | Нет | string | ровно 3 цифры |
+| head_phone | Телефон | Нет | string | 2-20 символов |
+| reception_is_active | Приём активен | Нет | boolean | true/false |
+| reception_start | Час начала | Нет | integer | 0-23 |
+| reception_end | Час окончания | Нет | integer | 0-23 |
 
 ### 4. Информация, возвращаемая при успешном изменении
 
-| Параметр | Тип |
-|----------|-----|
-| id | integer |
-| name | string |
-| code | string |
-| head_name | string |
-| head_specialty | string \| null |
-| head_phone | string \| null |
-| head_email | string \| null |
-| head_cabinet_id | integer \| null |
-| reception_is_active | boolean |
-| reception_schedule | string \| null |
-| created_at | datetime |
-| is_active | boolean |
+(та же структура, что и при создании)
 
 ## Удалить сущность по ID
 
-**Параметр пути (URL):** `id` (integer) - уникальный идентификатор отделения
-
-**Возвращаемое значение:** `True` – отделение удалено, `False` – отделение не найдено
+Возвращает `True` (мягкое удаление) или `False`.
 
 ## Получить сущность по ID
 
-**Параметр пути (URL):** `id` (integer) - уникальный идентификатор отделения
-
 ### 5. Информация, возвращаемая при успешном поиске
 
-| Параметр | Пояснение | Тип |
-|----------|-----------|-----|
-| id | Уникальный номер отделения | integer |
-| name | Название отделения | string |
-| code | Шифр направления подготовки | string |
-| head_name | ФИО заведующего отделением | string |
-| head_specialty | Специальность заведующего | string \| null |
-| head_phone | Телефон заведующего | string \| null |
-| head_email | Email заведующего | string \| null |
-| head_cabinet_id | Номер кабинета заведующего | integer \| null |
-| reception_is_active | Активен ли приём | boolean |
-| reception_schedule | Время приёма заведующего | string \| null |
-| created_at | Дата и время создания записи | datetime |
-| is_active | Активна ли запись | boolean |
+(те же поля, что и при создании, плюс `created_at`, `is_active`)
 
-## Получить список сущностей по заданным параметрам
+## Получить список сущностей
 
-### 6. Параметры для получения списка (query parameters)
+### 6. Параметры запроса
 
 | Параметр | Пояснение | Обязательность | Тип | Ограничение | Значение по умолчанию |
 |----------|-----------|----------------|-----|-------------|----------------------|
-| page | Номер страницы (пагинация) | Нет | integer | ≥ 1 | 1 |
-| size | Количество записей на странице | Нет | integer | 1-100 | 10 |
-| name | Поиск по части названия отделения | Нет | string | любая строка (частичное совпадение) | — |
+| page | Номер страницы | Нет | integer | ≥ 1 | 1 |
+| size | Записей на странице | Нет | integer | 1-100 | 10 |
+| name | Поиск по названию | Нет | string | частичное совпадение | — |
 
-### 7. Информация, возвращаемая в виде списка сущностей
+### 7. Возвращаемый список
 
 | Параметр | Тип |
 |----------|-----|
@@ -115,12 +86,11 @@
 | name | string |
 | code | string |
 | head_name | string |
-| head_specialty | string \| null |
+| head_cabinet_id | string |
 | head_phone | string \| null |
-| head_email | string \| null |
-| head_cabinet_id | integer \| null |
 | reception_is_active | boolean |
-| reception_schedule | string \| null |
+| reception_start | integer \| null |
+| reception_end | integer \| null |
 | created_at | datetime |
 | is_active | boolean |
 
